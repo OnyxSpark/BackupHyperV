@@ -1,0 +1,50 @@
+{
+  "ParallelBackups": 2,
+  "VirtualMachines": [
+    {
+      "VmName": "test1",
+      "ExportPathTemplate": "S:\\Export\\{HV_HOST_FULL}\\{HV_GUEST_FULL}\\Daily_{YEAR}_{MONTH}_{DAY}_{HOUR}_{MINUTE}",
+      "ExportRotateDays": 2,
+      "CreateArchive": true,
+      "ArchivePathTemplate": "S:\\Export\\{HV_HOST_FULL}\\{HV_GUEST_FULL}\\{HV_HOST_SHORT}_HV_VM_{HV_GUEST_FULL}_export_{YEAR}.{MONTH}.{DAY}.{HOUR}.{MINUTE}.zip",
+      "ArchiveCompressionLevel": 1,
+      "ArchiveRotateDays": 5,
+      "BackupSchedules": [
+        {
+          "Type": "SimpleSchedules.DailySchedule",
+          "OccursOnceAt": "12:55"
+        }
+      ]
+    },
+    {
+      "VmName": "test2",
+      "ExportPathTemplate": "S:\\Export\\{HV_HOST_FULL}\\{HV_GUEST_FULL}\\Daily_{YEAR}_{MONTH}_{DAY}_{HOUR}_{MINUTE}",
+      "ExportRotateDays": 2,
+      "CreateArchive": true,
+      "ArchivePathTemplate": "S:\\Export\\{HV_HOST_FULL}\\{HV_GUEST_FULL}\\{HV_HOST_SHORT}_HV_VM_{HV_GUEST_FULL}_export_{YEAR}.{MONTH}.{DAY}.{HOUR}.{MINUTE}.zip",
+      "ArchiveCompressionLevel": 1,
+      "ArchiveRotateDays": 5,
+      "BackupSchedules": [
+        {
+          "Type": "SimpleSchedules.DailySchedule",
+          "OccursOnceAt": "12:55"
+        }
+      ]
+    },
+    {
+      "VmName": "test3",
+      "ExportPathTemplate": "S:\\Export\\{HV_HOST_FULL}\\{HV_GUEST_FULL}\\Daily_{YEAR}_{MONTH}_{DAY}_{HOUR}_{MINUTE}",
+      "ExportRotateDays": 2,
+      "CreateArchive": true,
+      "ArchivePathTemplate": "S:\\Export\\{HV_HOST_FULL}\\{HV_GUEST_FULL}\\{HV_HOST_SHORT}_HV_VM_{HV_GUEST_FULL}_export_{YEAR}.{MONTH}.{DAY}.{HOUR}.{MINUTE}.zip",
+      "ArchiveCompressionLevel": 1,
+      "ArchiveRotateDays": 5,
+      "BackupSchedules": [
+        {
+          "Type": "SimpleSchedules.DailySchedule",
+          "OccursOnceAt": "12:55"
+        }
+      ]
+    }
+  ]
+}

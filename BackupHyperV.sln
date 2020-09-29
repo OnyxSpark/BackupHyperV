@@ -1,0 +1,31 @@
+﻿
+Microsoft Visual Studio Solution File, Format Version 12.00
+# Visual Studio Version 16
+VisualStudioVersion = 16.0.30413.136
+MinimumVisualStudioVersion = 10.0.40219.1
+Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "BackupHyperV.Service", "BackupHyperV.Service\BackupHyperV.Service.csproj", "{62AF7D12-A5D9-4F5D-AF16-AFA9724790E7}"
+EndProject
+Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "SimpleSchedules", "SimpleSchedules\SimpleSchedules.csproj", "{63224B7E-9F44-462D-BC18-50FB9104478F}"
+EndProject
+Global
+	GlobalSection(SolutionConfigurationPlatforms) = preSolution
+		Debug|Any CPU = Debug|Any CPU
+		Release|Any CPU = Release|Any CPU
+	EndGlobalSection
+	GlobalSection(ProjectConfigurationPlatforms) = postSolution
+		{62AF7D12-A5D9-4F5D-AF16-AFA9724790E7}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{62AF7D12-A5D9-4F5D-AF16-AFA9724790E7}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{62AF7D12-A5D9-4F5D-AF16-AFA9724790E7}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{62AF7D12-A5D9-4F5D-AF16-AFA9724790E7}.Release|Any CPU.Build.0 = Release|Any CPU
+		{63224B7E-9F44-462D-BC18-50FB9104478F}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{63224B7E-9F44-462D-BC18-50FB9104478F}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{63224B7E-9F44-462D-BC18-50FB9104478F}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{63224B7E-9F44-462D-BC18-50FB9104478F}.Release|Any CPU.Build.0 = Release|Any CPU
+	EndGlobalSection
+	GlobalSection(SolutionProperties) = preSolution
+		HideSolutionNode = FALSE
+	EndGlobalSection
+	GlobalSection(ExtensibilityGlobals) = postSolution
+		SolutionGuid = {A2FDA988-B037-4EB4-AF7E-72A8EF762BCB}
+	EndGlobalSection
+EndGlobal
