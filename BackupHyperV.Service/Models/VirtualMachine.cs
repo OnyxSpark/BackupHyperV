@@ -10,32 +10,41 @@ namespace BackupHyperV.Service.Models
 {
     public class VirtualMachine
     {
-        [JsonProperty("VmName")]
+        [JsonProperty("VmName", Order = 1)]
         public string Name { get; set; }
 
-        [JsonProperty("BackupSchedules")]
+        [JsonProperty("BackupSchedules", Order = 8)]
         public List<ScheduleConfig> SchedulesConfigs { get; set; }
 
+        [JsonIgnore]
         public Schedule[] LoadedSchedules { get; internal set; }
 
+        [JsonProperty(Order = 2)]
         public string ExportPathTemplate { get; set; }
 
+        [JsonProperty(Order = 5)]
         public string ArchivePathTemplate { get; set; }
 
+        [JsonProperty(Order = 3)]
         public uint ExportRotateDays { get; set; }
 
+        [JsonProperty(Order = 7)]
         public uint ArchiveRotateDays { get; set; }
 
+        [JsonProperty(Order = 4)]
         public bool CreateArchive { get; set; }
 
+        [JsonProperty(Order = 6)]
         public int ArchiveCompressionLevel { get; set; }
 
+        [JsonIgnore]
         public BackupJobStatus Status
         {
             get { return (BackupJobStatus)_status; }
             set { Interlocked.Exchange(ref _status, (int)value); }
         }
 
+        [JsonIgnore]
         public string ExportPath
         {
             get
@@ -47,6 +56,7 @@ namespace BackupHyperV.Service.Models
             }
         }
 
+        [JsonIgnore]
         public string ArchivePath
         {
             get
@@ -58,12 +68,14 @@ namespace BackupHyperV.Service.Models
             }
         }
 
+        [JsonIgnore]
         public int ExportPercentComplete
         {
             get { return _exportPercentComplete; }
             set { Interlocked.Exchange(ref _exportPercentComplete, value); }
         }
 
+        [JsonIgnore]
         public int ArchivePercentComplete
         {
             get { return _archivePercentComplete; }

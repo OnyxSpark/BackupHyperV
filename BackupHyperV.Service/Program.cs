@@ -50,6 +50,7 @@ namespace BackupHyperV.Service
                            services.AddSingleton<IVmArchiver, VmArchiver>();
                            services.AddSingleton<IBackupRemover, BackupRemover>();
                            services.AddSingleton<IProgressReporter, ProgressReporter>();
+                           services.AddSingleton<IBackupTaskService, BackupTaskService>();
                            services.AddSingleton<MainLogic>();
 
                            services.AddHostedService<Worker>();

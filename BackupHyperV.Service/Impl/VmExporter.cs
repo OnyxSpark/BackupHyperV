@@ -8,7 +8,7 @@ using System.Management;
 using System.Threading;
 using System.Xml;
 
-// Code based on this examples:
+// Code based on these examples:
 // https://github.com/microsoft/Windows-classic-samples/tree/master/Samples/Hyper-V
 // https://docs.microsoft.com/en-us/windows/win32/hyperv_v2/exporting-virtual-machines
 

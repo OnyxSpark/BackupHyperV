@@ -1,13 +1,10 @@
 ﻿using BackupHyperV.Service.Interfaces;
 using BackupHyperV.Service.Models;
-using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.Logging;
-using Newtonsoft.Json;
 using SimpleSchedules;
 using System;
 using System.Collections.Concurrent;
 using System.Collections.Generic;
-using System.IO;
 using System.Linq;
 using System.Threading.Tasks;
 
@@ -17,11 +14,11 @@ namespace BackupHyperV.Service
     {
         private readonly ILogger<MainLogic> _logger;
         private readonly ISchedulesManager _schManager;
-        private readonly IConfiguration _config;
         private readonly IVmExporter _vmExporter;
         private readonly IVmArchiver _vmArchiver;
         private readonly IBackupRemover _backupRemover;
         private readonly IProgressReporter _progressReporter;
+        private readonly IBackupTaskService _backupTaskService;
 
         private BackupTask backupTask;
         private bool backupingNow;
@@ -29,65 +26,26 @@ namespace BackupHyperV.Service
 
         public MainLogic(ILogger<MainLogic> logger
                        , ISchedulesManager schManager
-                       , IConfiguration config
                        , IVmExporter vmExporter
                        , IVmArchiver vmArchiver
                        , IBackupRemover backupRemover
-                       , IProgressReporter progressReporter)
+                       , IProgressReporter progressReporter
+                       , IBackupTaskService backupTaskService)
         {
             _logger = logger;
             _schManager = schManager;
-            _config = config;
             _vmArchiver = vmArchiver;
             _vmExporter = vmExporter;
             _backupRemover = backupRemover;
             _progressReporter = progressReporter;
+            _backupTaskService = backupTaskService;
 
             _schManager.EventOccurred += Schedules_EventOccurred;
 
-            backupTask = GetBackupTask();
+            backupTask = _backupTaskService.GetBackupTask();
             _progressReporter.SendReportsFor(backupTask.VirtualMachines);
 
             LoadSchedulesFromBackupTask();
-        }
-
-        private bool IsStandAloneMode()
-        {
-            // TODO: add central server recognition
-            return true;
-        }
-
-        private BackupTask GetBackupTask()
-        {
-            if (IsStandAloneMode())
-            {
-                return GetBackupTaskFromLocalFile();
-            }
-            else
-            {
-                return GetBackupTaskFromCentralServer();
-            }
-        }
-
-        private BackupTask GetBackupTaskFromCentralServer()
-        {
-            // TODO: add work with central server
-            return null;
-        }
-
-        private BackupTask GetBackupTaskFromLocalFile()
-        {
-            string backupTaskFile = _config.GetValue<string>("BackupTaskFile");
-
-            if (string.IsNullOrWhiteSpace(backupTaskFile))
-                throw new ArgumentException("BackupTaskFile config option is null or empty.");
-
-            if (!File.Exists(backupTaskFile))
-                throw new FileNotFoundException("Could not find Backup Task file.", backupTaskFile);
-
-            string json = File.ReadAllText(backupTaskFile);
-
-            return JsonConvert.DeserializeObject<BackupTask>(json);
         }
 
         private void LoadSchedulesFromBackupTask()
