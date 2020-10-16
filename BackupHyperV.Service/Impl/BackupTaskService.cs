@@ -7,7 +7,6 @@ using SimpleSchedules;
 using System;
 using System.Collections.Generic;
 using System.IO;
-using System.Management;
 
 /*
 Work logic:
@@ -126,13 +125,9 @@ namespace BackupHyperV.Service.Impl
         private List<string> GetLocalVMsNames()
         {
             var vmNames = new List<string>();
-            string hvNamespace = Get_HyperV_Namespace();
 
-            if (string.IsNullOrWhiteSpace(hvNamespace))
-                throw new Exception("Could not detect Hyper-V namespace in WMI API. Check if current host is a valid Hyper-V server.");
-
-            var scope = GetScope(hvNamespace);
-            var data = WmiQuery(scope, "SELECT * FROM MSVM_ComputerSystem WHERE Caption != 'Hosting Computer System'");
+            var scope = WmiRoutines.GetScope(WmiRoutines.NAMESPACE_HYPER_V);
+            var data = WmiRoutines.WmiQuery(scope, "SELECT * FROM MSVM_ComputerSystem WHERE Caption != 'Hosting Computer System'");
 
             if (data != null && data.Count > 0)
             {
@@ -149,59 +144,6 @@ namespace BackupHyperV.Service.Impl
             }
 
             return vmNames;
-        }
-
-        private ManagementScope GetScope(string wmiNamespace)
-        {
-            return new ManagementScope($"\\\\localhost\\{wmiNamespace}");
-        }
-
-        public static ManagementObjectCollection WmiQuery(ManagementScope scope, string strQuery)
-        {
-            ManagementObjectCollection result = null;
-            ObjectQuery query = new ObjectQuery(strQuery);
-
-            scope.Connect();
-
-            using (var searcher = new ManagementObjectSearcher(scope, query))
-            {
-                result = searcher.Get();
-            }
-
-            return result;
-        }
-
-        private string Get_HyperV_Namespace()
-        {
-            string result = null;
-
-            var scopeRoot = GetScope("ROOT");
-            var scopeVirt = GetScope(@"ROOT\virtualization");
-
-            if (NamespaceExists(scopeRoot, "virtualization"))
-            {
-                result = @"ROOT\virtualization";
-
-                if (NamespaceExists(scopeVirt, "v2"))
-                    result = @"ROOT\virtualization\v2";
-            }
-
-            _logger.LogDebug("Get_HyperV_Namespace() == \"{ns}\"", result);
-
-            return result;
-        }
-
-        private bool NamespaceExists(ManagementScope scope, string wmiNamespace)
-        {
-            var nsClass = new ManagementClass(scope, new ManagementPath("__NAMESPACE"), null);
-
-            foreach (ManagementObject ns in nsClass.GetInstances())
-            {
-                if (wmiNamespace.ToLower() == ns["Name"]?.ToString().ToLower())
-                    return true;
-            }
-
-            return false;
         }
     }
 }

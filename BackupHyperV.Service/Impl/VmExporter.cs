@@ -28,10 +28,10 @@ namespace BackupHyperV.Service.Impl
             virtualMachine.ExportPercentComplete = 0;
 
             bool exportSuccess = true;
-            ManagementScope scope = new ManagementScope(@"root\virtualization\v2", null);
+            var scope = WmiRoutines.GetScope(WmiRoutines.NAMESPACE_HYPER_V);
 
-            using (ManagementObject virtualSystemService = GetServiceObject(scope, "Msvm_VirtualSystemManagementService"))
-            using (ManagementObject srv = GetVirtualMachine(virtualMachine.Name, scope))
+            using (ManagementObject virtualSystemService = WmiRoutines.GetServiceObject(scope, "Msvm_VirtualSystemManagementService"))
+            using (ManagementObject srv = GetVirtualMachine(scope, virtualMachine.Name))
             using (ManagementBaseObject inParams = virtualSystemService.GetMethodParameters("ExportSystemDefinition"))
             {
                 if (!Directory.Exists(virtualMachine.ExportPath))
@@ -66,48 +66,16 @@ namespace BackupHyperV.Service.Impl
         }
 
         // Gets the Msvm_ComputerSystem instance that matches the requested virtual machine name.
-        private ManagementObject GetVirtualMachine(string name, ManagementScope scope)
+        private ManagementObject GetVirtualMachine(ManagementScope scope, string name)
         {
-            return GetVmObject(name, "Msvm_ComputerSystem", scope);
-        }
+            string query = $"SELECT * FROM Msvm_ComputerSystem WHERE ElementName = \"{name}\"";
+            var data = WmiRoutines.WmiQuery(scope, query);
+            var result = WmiRoutines.GetFirstObjectFromCollection(data);
 
-        // Gets the first virtual machine object of the given class with the given name.
-        private ManagementObject GetVmObject(string name, string className, ManagementScope scope)
-        {
-            string vmQueryWql = string.Format(CultureInfo.InvariantCulture,
-                "SELECT * FROM {0} WHERE ElementName=\"{1}\"", className, name);
+            if (result == null)
+                throw new Exception($"Could not find virtual machine with name \"{name}\"");
 
-            SelectQuery vmQuery = new SelectQuery(vmQueryWql);
-
-            using (ManagementObjectSearcher vmSearcher = new ManagementObjectSearcher(scope, vmQuery))
-            using (ManagementObjectCollection vmCollection = vmSearcher.Get())
-            {
-                if (vmCollection.Count == 0)
-                {
-                    throw new ManagementException(string.Format(CultureInfo.CurrentCulture,
-                        "No {0} could be found with name \"{1}\"", className, name));
-                }
-
-                //
-                // If multiple virtual machines exist with the requested name, return the first 
-                // one.
-                //
-
-                ManagementObject vm = GetFirstObjectFromCollection(vmCollection);
-
-                return vm;
-            }
-        }
-
-        // Common utility function to get a service object
-        private ManagementObject GetServiceObject(ManagementScope scope, string serviceName)
-        {
-            scope.Connect();
-            ManagementPath wmiPath = new ManagementPath(serviceName);
-            ManagementClass serviceClass = new ManagementClass(scope, wmiPath, null);
-            ManagementObjectCollection services = serviceClass.GetInstances();
-
-            return GetFirstObjectFromCollection(services);
+            return result;
         }
 
         // Validates the output parameters of a method call and prints errors, if any.
@@ -154,7 +122,7 @@ namespace BackupHyperV.Service.Impl
                         // why the method call failed. If it did contain such information,
                         // use it instead of a generic message.
                         //
-                        if (!string.IsNullOrEmpty((string)job["ErrorDescription"]))
+                        if (!string.IsNullOrWhiteSpace((string)job["ErrorDescription"]))
                         {
                             errorMessage = (string)job["ErrorDescription"];
                         }
@@ -275,17 +243,6 @@ namespace BackupHyperV.Service.Impl
                 _logger.LogError("Error Message: {msg}", errorMessage);
                 _logger.LogError("Error Source:  {src}", errorSource);
             }
-        }
-
-        private ManagementObject GetFirstObjectFromCollection(ManagementObjectCollection collection)
-        {
-            if (collection == null || collection.Count == 0)
-                throw new ArgumentException("The collection is null or contains no objects", "collection");
-
-            foreach (ManagementObject managementObject in collection)
-                return managementObject;
-
-            return null;
         }
     }
 }

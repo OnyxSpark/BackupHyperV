@@ -17,6 +17,9 @@ namespace BackupHyperV.Service
             if (!IsLocalAdmin())
                 throw new Exception("Must have Administrator rights to run this program.");
 
+            if (!WmiRoutines.IsFeatureInstalled("Hyper-V"))
+                throw new Exception("Server role \"Hyper-V\" is not installed. Cannot continue.");
+
             _logger = logger;
             _mainLogic = mainLogic;
         }
