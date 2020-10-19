@@ -3,3 +3,6 @@ obj/
 packages/
 .vs/
 *.user
+
+WebApi/appsettings.Development.json
+WebApi/webapi.log
