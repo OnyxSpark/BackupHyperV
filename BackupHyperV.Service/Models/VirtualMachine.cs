@@ -3,12 +3,12 @@ using SimpleSchedules;
 using System;
 using System.Collections.Generic;
 using System.IO;
-using System.Net.NetworkInformation;
+using System.Linq;
 using System.Threading;
 
 namespace BackupHyperV.Service.Models
 {
-    public class VirtualMachine
+    public class VirtualMachine : IEquatable<VirtualMachine>
     {
         [JsonProperty("VmName", Order = 1)]
         public string Name { get; set; }
@@ -110,7 +110,7 @@ namespace BackupHyperV.Service.Models
             string s = null;
             DateTime dt = DateTime.Now;
 
-            s = template.Replace("{HV_HOST_FULL}", GetCurrentServerFQDN());
+            s = template.Replace("{HV_HOST_FULL}", Util.GetCurrentServerFQDN());
             s = s.Replace("{HV_HOST_SHORT}", Environment.MachineName.ToLower());
             s = s.Replace("{HV_GUEST_FULL}", Name);
             s = s.Replace("{HV_GUEST_SHORT}", GetShortName(Name));
@@ -130,21 +130,65 @@ namespace BackupHyperV.Service.Models
             return name.Split('.')[0];
         }
 
-        private string GetDomainFQDN()
+        public bool Equals(VirtualMachine other)
         {
-            IPGlobalProperties properties = IPGlobalProperties.GetIPGlobalProperties();
-            return (properties != null && properties.DomainName != null) ? properties.DomainName : null;
+            if (SchedulesConfigs == null && other.SchedulesConfigs != null)
+                return false;
+
+            if (SchedulesConfigs != null && other.SchedulesConfigs == null)
+                return false;
+
+            if (SchedulesConfigs != null && other.SchedulesConfigs != null
+                && !Enumerable.SequenceEqual(SchedulesConfigs, other.SchedulesConfigs))
+                return false;
+
+            if (Name == other.Name
+                && ExportPathTemplate == other.ExportPathTemplate
+                && ArchivePathTemplate == other.ArchivePathTemplate
+                && ExportRotateDays == other.ExportRotateDays
+                && ArchiveRotateDays == other.ArchiveRotateDays
+                && CreateArchive == other.CreateArchive
+                && ArchiveCompressionLevel == other.ArchiveCompressionLevel)
+                return true;
+
+            return false;
         }
 
-        private string GetCurrentServerFQDN()
+        public override int GetHashCode()
         {
-            string srv = Environment.MachineName.ToLower();
-            string domain = GetDomainFQDN();
+            return HashCode.Combine(Name, SchedulesConfigs, ExportPathTemplate, ArchivePathTemplate,
+                                    ExportRotateDays, ArchiveRotateDays, CreateArchive,
+                                    ArchiveCompressionLevel);
+        }
 
-            if (string.IsNullOrWhiteSpace(domain))
-                return srv;
+        public static bool operator ==(VirtualMachine left, VirtualMachine right)
+        {
+            return EqualityComparer<VirtualMachine>.Default.Equals(left, right);
+        }
 
-            return $"{srv}.{domain}";
+        public static bool operator !=(VirtualMachine left, VirtualMachine right)
+        {
+            return !(left == right);
+        }
+
+        public override bool Equals(object obj)
+        {
+            if (ReferenceEquals(this, obj))
+            {
+                return true;
+            }
+
+            if (ReferenceEquals(obj, null))
+            {
+                return false;
+            }
+
+            var vm = obj as VirtualMachine;
+
+            if (vm == null)
+                return false;
+
+            return Equals(vm);
         }
     }
 }

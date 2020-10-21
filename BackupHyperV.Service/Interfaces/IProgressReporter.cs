@@ -6,7 +6,7 @@ namespace BackupHyperV.Service.Interfaces
 {
     public interface IProgressReporter : IDisposable
     {
-        void SetReportFrequency(int frequencyMsec);
+        void SetReportFrequency(int frequencyMilliseconds);
 
         void SendReportsFor(IList<VirtualMachine> virtualMachines);
 

@@ -1,6 +1,9 @@
 ﻿using BackupHyperV.Service.Interfaces;
 using BackupHyperV.Service.Models;
+using Common.Models;
+using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.Logging;
+using Newtonsoft.Json;
 using SimpleSchedules;
 using System;
 using System.Collections.Concurrent;
@@ -12,6 +15,7 @@ namespace BackupHyperV.Service
 {
     public class MainLogic : IDisposable
     {
+        private readonly IConfiguration _config;
         private readonly ILogger<MainLogic> _logger;
         private readonly ISchedulesManager _schManager;
         private readonly IVmExporter _vmExporter;
@@ -19,19 +23,23 @@ namespace BackupHyperV.Service
         private readonly IBackupRemover _backupRemover;
         private readonly IProgressReporter _progressReporter;
         private readonly IBackupTaskService _backupTaskService;
+        private readonly ICentralServer _centralServer;
 
         private BackupTask backupTask;
         private bool backupingNow;
         private ConcurrentQueue<VirtualMachine> vmsToBackup = new ConcurrentQueue<VirtualMachine>();
 
-        public MainLogic(ILogger<MainLogic> logger
+        public MainLogic(IConfiguration config
+                       , ILogger<MainLogic> logger
                        , ISchedulesManager schManager
                        , IVmExporter vmExporter
                        , IVmArchiver vmArchiver
                        , IBackupRemover backupRemover
                        , IProgressReporter progressReporter
-                       , IBackupTaskService backupTaskService)
+                       , IBackupTaskService backupTaskService
+                       , ICentralServer centralServer)
         {
+            _config = config;
             _logger = logger;
             _schManager = schManager;
             _vmArchiver = vmArchiver;
@@ -39,18 +47,55 @@ namespace BackupHyperV.Service
             _backupRemover = backupRemover;
             _progressReporter = progressReporter;
             _backupTaskService = backupTaskService;
+            _centralServer = centralServer;
 
             _schManager.EventOccurred += Schedules_EventOccurred;
+            _backupTaskService.OnBackupTaskChange += BackupTaskChanged;
 
-            backupTask = _backupTaskService.GetBackupTask();
+            if (_centralServer.PingSuccess)
+            {
+                RefreshCurrentTask();
+                SendInfoToCentralServer();
+            }
+        }
+
+        private void SendInfoToCentralServer()
+        {
+            var hypervisor = new HttpPostHypervisor()
+            {
+                Hypervisor = Util.GetCurrentServerFQDN(),
+                BackupTask = JsonConvert.SerializeObject(backupTask),
+                VirtualMachines = Util.GetLocalVirtualMachines()
+            };
+
+            var result = _centralServer.UpdateHypervisor(hypervisor).Result;
+
+            if (result.Success)
+                _logger.LogInformation("Successfully sent hypervisor info to central server.");
+            else
+                _logger.LogError("Failed to sent hypervisor info to central server. Error was: {error}",
+                                        result.Message);
+        }
+
+        private void BackupTaskChanged(object sender, EventArgs e)
+        {
+            RefreshCurrentTask();
+        }
+
+        private void RefreshCurrentTask()
+        {
+            backupTask = _backupTaskService.CurrentBackupTask;
             _progressReporter.SendReportsFor(backupTask.VirtualMachines);
 
             LoadSchedulesFromBackupTask();
+
+            _logger.LogInformation("New backup task was loaded.");
         }
 
         private void LoadSchedulesFromBackupTask()
         {
             CheckVirtualMachinesExist();
+            DeleteCurrentSchedules();
 
             foreach (var vm in backupTask.VirtualMachines)
                 vm.LoadedSchedules = _schManager.LoadFrom(vm.SchedulesConfigs);
@@ -75,6 +120,16 @@ namespace BackupHyperV.Service
              || backupTask.VirtualMachines == null
              || backupTask.VirtualMachines.Count == 0)
                 throw new ArgumentException("backupTask is null or does not contains Virtual Machines.");
+        }
+
+        private void DeleteCurrentSchedules()
+        {
+            if (_schManager.Schedules != null && _schManager.Schedules.Count > 0)
+                for (int i = _schManager.Schedules.Count - 1; i >= 0; i--)
+                {
+                    var sch = _schManager.Schedules[i];
+                    _schManager.RemoveSchedule(sch);
+                }
         }
 
         private VirtualMachine FindVirtualMachineBySchedule(Schedule sch)
@@ -219,22 +274,51 @@ namespace BackupHyperV.Service
             vm.Status = BackupJobStatus.Idle;
         }
 
+        private void SetTimersIntervals()
+        {
+            int progressInterval = _config.GetValue<int>("ProgressReportIntervalSeconds");
+            int refreshBackupTaskInterval = _config.GetValue<int>("RefreshBackupTaskIntervalSeconds");
+
+            _logger.LogDebug("Setting report progress interval to {progress} seconds...", progressInterval);
+            _progressReporter.SetReportFrequency(progressInterval * 1000);
+
+            _logger.LogDebug("Setting refresh backup task interval to {refresh} seconds...", refreshBackupTaskInterval);
+            _backupTaskService.SetUpdateFrequency(refreshBackupTaskInterval * 1000);
+        }
+
         public Task StartAsync()
         {
+            SetTimersIntervals();
+
             _progressReporter.StartReporting();
-            return _schManager.StartAsync();
+            _logger.LogDebug("{type} timer started.", nameof(IProgressReporter));
+
+            _backupTaskService.StartUpdating();
+            _logger.LogDebug("{type} timer started.", nameof(IBackupTaskService));
+
+            var t = _schManager.StartAsync();
+            _logger.LogDebug("{type} timer started.", nameof(ISchedulesManager));
+            return t;
         }
 
         public Task StopAsync()
         {
             _progressReporter.StopReporting();
-            return _schManager.StopAsync();
+            _logger.LogDebug("{type} timer stopped.", nameof(IProgressReporter));
+
+            _backupTaskService.StopUpdating();
+            _logger.LogDebug("{type} timer stopped.", nameof(IBackupTaskService));
+
+            var t = _schManager.StopAsync();
+            _logger.LogDebug("{type} timer stopped.", nameof(ISchedulesManager));
+            return t;
         }
 
         public void Dispose()
         {
             _schManager.Dispose();
             _progressReporter.Dispose();
+            _backupTaskService.Dispose();
         }
     }
 }

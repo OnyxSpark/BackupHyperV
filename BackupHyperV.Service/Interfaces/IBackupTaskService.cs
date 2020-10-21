@@ -1,9 +1,18 @@
 ﻿using BackupHyperV.Service.Models;
+using System;
 
 namespace BackupHyperV.Service.Interfaces
 {
-    public interface IBackupTaskService
+    public interface IBackupTaskService : IDisposable
     {
-        BackupTask GetBackupTask();
+        event EventHandler OnBackupTaskChange;
+
+        BackupTask CurrentBackupTask { get; }
+
+        void SetUpdateFrequency(int frequencyMilliseconds);
+
+        void StartUpdating();
+
+        void StopUpdating();
     }
 }

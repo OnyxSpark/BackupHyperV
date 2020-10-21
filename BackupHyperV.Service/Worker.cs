@@ -44,7 +44,6 @@ namespace BackupHyperV.Service
 
         public Task StartAsync(CancellationToken cancellationToken)
         {
-            _logger.LogInformation("Program started.");
             return _mainLogic.StartAsync();
         }
 

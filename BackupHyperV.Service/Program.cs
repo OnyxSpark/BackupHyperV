@@ -24,6 +24,7 @@ namespace BackupHyperV.Service
 
             try
             {
+                Log.Information("Program started.");
                 CreateHostBuilder(args, config).Build().Run();
             }
             catch (Exception e)
@@ -51,6 +52,7 @@ namespace BackupHyperV.Service
                            services.AddSingleton<IBackupRemover, BackupRemover>();
                            services.AddSingleton<IProgressReporter, ProgressReporter>();
                            services.AddSingleton<IBackupTaskService, BackupTaskService>();
+                           services.AddSingleton<ICentralServer, CentralServer>();
                            services.AddSingleton<MainLogic>();
 
                            services.AddHostedService<Worker>();

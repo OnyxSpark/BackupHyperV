@@ -7,6 +7,7 @@ using SimpleSchedules;
 using System;
 using System.Collections.Generic;
 using System.IO;
+using System.Threading;
 
 /*
 Work logic:
@@ -22,46 +23,102 @@ namespace BackupHyperV.Service.Impl
 {
     public class BackupTaskService : IBackupTaskService
     {
-        private readonly ILogger<BackupTaskService> _logger;
-        private readonly IConfiguration _config;
+        public event EventHandler OnBackupTaskChange;
 
-        public BackupTaskService(ILogger<BackupTaskService> logger
-                               , IConfiguration config)
+        public BackupTask CurrentBackupTask
         {
-            _logger = logger;
-            _config = config;
+            get
+            {
+                lock (lockBackupTask)
+                {
+                    return _currentBackupTask;
+                }
+            }
+            private set
+            {
+                lock (lockBackupTask)
+                {
+                    _currentBackupTask = value;
+                }
+            }
         }
 
-        public BackupTask GetBackupTask()
+        private readonly ILogger<BackupTaskService> _logger;
+        private readonly IConfiguration _config;
+        private readonly ICentralServer _centralServer;
+
+        private Timer timer;
+        private int timerFrequency = 5 * 60 * 1000;    // default 5 min
+        private bool disposed = false;
+        private object lockBackupTask = new object();
+        private BackupTask _currentBackupTask;
+
+        public BackupTaskService(ILogger<BackupTaskService> logger
+                               , IConfiguration config
+                               , ICentralServer centralServer)
         {
-            if (IsStandAloneMode())
+            timer = new Timer(new TimerCallback(TimerProc), null, Timeout.Infinite, Timeout.Infinite);
+
+            _logger = logger;
+            _config = config;
+            _centralServer = centralServer;
+
+            CurrentBackupTask = GetBackupTask();
+
+            // task was downloaded from central server
+            if (_centralServer.PingSuccess)
+                SaveBackupTaskToDisk();
+        }
+
+        private void TimerProc(object state)
+        {
+            var task = GetBackupTask();
+
+            if (task != CurrentBackupTask)
             {
-                return GetBackupTaskFromLocalFile();
+                CurrentBackupTask = task;
+                SaveBackupTaskToDisk();
+                OnBackupTaskChange?.Invoke(this, new EventArgs());
+            }
+        }
+
+        private BackupTask GetBackupTask()
+        {
+            if (_centralServer.PingSuccess)
+            {
+                _logger.LogDebug("Reading backup task from central server.");
+                return GetBackupTaskFromCentralServer();
             }
             else
             {
-                return GetBackupTaskFromCentralServer();
+                _logger.LogDebug("Reading backup task from local file.");
+                return GetBackupTaskFromLocalFile();
             }
         }
 
-        private bool IsStandAloneMode()
+        private void SaveBackupTaskToDisk()
         {
-            // TODO: add central server recognition
-            return true;
+            string backupTaskFile = GetPathToLocalBackupTaskFile();
+            string json = JsonConvert.SerializeObject(CurrentBackupTask, Formatting.Indented);
+            File.WriteAllText(backupTaskFile, json);
+
+            _logger.LogDebug("New backup task was saved to file: \"{file}\"", backupTaskFile);
         }
 
         private BackupTask GetBackupTaskFromCentralServer()
         {
-            // TODO: add work with central server
+            string hypervisor = Util.GetCurrentServerFQDN();
+            var result = _centralServer.GetBackupTask(hypervisor).Result;
+
+            if (result.Success)
+                return JsonConvert.DeserializeObject<BackupTask>(result.Data);
+
             return null;
         }
 
         private BackupTask GetBackupTaskFromLocalFile()
         {
-            string backupTaskFile = _config.GetValue<string>("BackupTaskFile");
-
-            if (string.IsNullOrWhiteSpace(backupTaskFile))
-                throw new ArgumentException("BackupTaskFile config option is null or empty.");
+            string backupTaskFile = GetPathToLocalBackupTaskFile();
 
             if (!File.Exists(backupTaskFile))
             {
@@ -75,9 +132,19 @@ namespace BackupHyperV.Service.Impl
             return JsonConvert.DeserializeObject<BackupTask>(json);
         }
 
+        private string GetPathToLocalBackupTaskFile()
+        {
+            string path = _config.GetValue<string>("BackupTaskFile");
+
+            if (string.IsNullOrWhiteSpace(path))
+                throw new ArgumentException("BackupTaskFile config option is null or empty.");
+
+            return path;
+        }
+
         private void CreateNewBackupTaskFile(string path)
         {
-            var localVMs = GetLocalVMsNames();
+            var localVMs = Util.GetLocalVirtualMachines();
 
             if (localVMs.Count == 0)
                 throw new Exception("Could not find any virtual machines. Cannot continue.");
@@ -122,28 +189,33 @@ namespace BackupHyperV.Service.Impl
             return result;
         }
 
-        private List<string> GetLocalVMsNames()
+        public void SetUpdateFrequency(int frequencyMilliseconds)
         {
-            var vmNames = new List<string>();
+            timerFrequency = frequencyMilliseconds;
+            timer.Change(timerFrequency, timerFrequency);
 
-            var scope = WmiRoutines.GetScope(WmiRoutines.NAMESPACE_HYPER_V);
-            var data = WmiRoutines.WmiQuery(scope, "SELECT * FROM MSVM_ComputerSystem WHERE Caption != 'Hosting Computer System'");
+            _logger.LogDebug("{type} timer frequency changed to {msec} milliseconds.",
+                        nameof(BackupTaskService), frequencyMilliseconds);
+        }
 
-            if (data != null && data.Count > 0)
+        public void StartUpdating()
+        {
+            timer.Change(timerFrequency, timerFrequency);
+        }
+
+        public void StopUpdating()
+        {
+            timer.Change(Timeout.Infinite, Timeout.Infinite);
+        }
+
+        public void Dispose()
+        {
+            if (!disposed)
             {
-                foreach (var item in data)
-                {
-                    string vmName = item["ElementName"]?.ToString();
-
-                    if (!string.IsNullOrWhiteSpace(vmName))
-                    {
-                        vmNames.Add(vmName);
-                        _logger.LogDebug("Found VM: \"{vm}\"", vmName);
-                    }
-                }
+                timer.Dispose();
+                disposed = true;
+                GC.SuppressFinalize(this);
             }
-
-            return vmNames;
         }
     }
 }

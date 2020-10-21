@@ -12,7 +12,7 @@ namespace BackupHyperV.Service.Impl
         private readonly ILogger<ProgressReporter> _logger;
 
         private Timer timer;
-        private int timerFrequency = 5000;    // 5 sec
+        private int timerFrequency = 5000;    // default 5 sec
         private bool disposed = false;
         private IList<VirtualMachine> monitored;
 
@@ -59,10 +59,13 @@ namespace BackupHyperV.Service.Impl
             monitored = virtualMachines;
         }
 
-        public void SetReportFrequency(int frequencyMsec)
+        public void SetReportFrequency(int frequencyMilliseconds)
         {
-            timerFrequency = frequencyMsec;
+            timerFrequency = frequencyMilliseconds;
             timer.Change(0, timerFrequency);
+
+            _logger.LogDebug("{type} timer frequency changed to {msec} milliseconds.",
+                        nameof(BackupTaskService), frequencyMilliseconds);
         }
 
         public void StartReporting()

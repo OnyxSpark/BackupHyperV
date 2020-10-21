@@ -9,6 +9,11 @@ namespace SimpleSchedules
     public interface ISchedulesManager
     {
         /// <summary>
+        /// Returns list of current schedules
+        /// </summary>
+        List<Schedule> Schedules { get; }
+
+        /// <summary>
         /// Reads array of schedules from IConfiguration, using default section name "SimpleSchedules"
         /// </summary>
         /// <param name="configuration">Standard .Net Core IConfiguration object</param>
