@@ -12,21 +12,7 @@ namespace BackupHyperV.Service.Impl
 {
     public class CentralServer : ICentralServer
     {
-        public bool PingSuccess
-        {
-            get
-            {
-                string centralServer = _config.GetValue<string>("CentralServer");
-
-                if (string.IsNullOrWhiteSpace(centralServer))
-                {
-                    _logger.LogDebug("Config parameter \"CentralServer\" not set. Will continue in standalone mode.");
-                    return false;
-                }
-
-                return ServerPing().Result;
-            }
-        }
+        public bool PingSuccess { get { return pingSuccess; } }
 
         private readonly IConfiguration _config;
         private readonly ILogger<CentralServer> _logger;
@@ -37,6 +23,7 @@ namespace BackupHyperV.Service.Impl
         private readonly string UrlGetBackupTask;
 
         private readonly HttpClient client = new HttpClient();
+        private bool pingSuccess;
 
         public CentralServer(IConfiguration config
                            , ILogger<CentralServer> logger)
@@ -47,14 +34,20 @@ namespace BackupHyperV.Service.Impl
             string centralServer = _config.GetValue<string>("CentralServer");
 
             if (string.IsNullOrWhiteSpace(centralServer))
+            {
+                _logger.LogDebug("Config parameter \"CentralServer\" is not set. Will continue in standalone mode.");
+                pingSuccess = false;
                 return;
+            }
 
             centralServer = centralServer.TrimEnd('/');
 
-            UrlPing = centralServer + "/api/ping";
-            UrlUpdateHypervisor = centralServer + "/api/UpdateHypervisor";
-            UrlSendBackupProgress = centralServer + "/api/SendBackupProgress";
-            UrlGetBackupTask = centralServer + "/api/GetBackupTask";
+            UrlPing = $"{centralServer}/api/ping";
+            UrlUpdateHypervisor = $"{centralServer}/api/UpdateHypervisor";
+            UrlSendBackupProgress = $"{centralServer}/api/SendBackupProgress";
+            UrlGetBackupTask = $"{centralServer}/api/GetBackupTask";
+
+            pingSuccess = ServerPing().Result;
         }
 
         public async Task<bool> ServerPing()

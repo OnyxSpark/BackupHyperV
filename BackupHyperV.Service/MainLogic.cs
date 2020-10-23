@@ -52,11 +52,10 @@ namespace BackupHyperV.Service
             _schManager.EventOccurred += Schedules_EventOccurred;
             _backupTaskService.OnBackupTaskChange += BackupTaskChanged;
 
+            LoadNewTask();
+
             if (_centralServer.PingSuccess)
-            {
-                RefreshCurrentTask();
                 SendInfoToCentralServer();
-            }
         }
 
         private void SendInfoToCentralServer()
@@ -79,10 +78,10 @@ namespace BackupHyperV.Service
 
         private void BackupTaskChanged(object sender, EventArgs e)
         {
-            RefreshCurrentTask();
+            LoadNewTask();
         }
 
-        private void RefreshCurrentTask()
+        private void LoadNewTask()
         {
             backupTask = _backupTaskService.CurrentBackupTask;
             _progressReporter.SendReportsFor(backupTask.VirtualMachines);

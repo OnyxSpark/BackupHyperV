@@ -1,5 +1,6 @@
 ﻿using BackupHyperV.Service.Interfaces;
 using BackupHyperV.Service.Models;
+using Common.Models;
 using Microsoft.Extensions.Logging;
 using System;
 using System.Collections.Generic;
@@ -10,53 +11,98 @@ namespace BackupHyperV.Service.Impl
     public class ProgressReporter : IProgressReporter, IDisposable
     {
         private readonly ILogger<ProgressReporter> _logger;
+        private readonly ICentralServer _centralServer;
 
         private Timer timer;
         private int timerFrequency = 5000;    // default 5 sec
         private bool disposed = false;
-        private IList<VirtualMachine> monitored;
+        private IList<VirtualMachine> monitoredVMs;
 
-        public ProgressReporter(ILogger<ProgressReporter> logger)
+        public ProgressReporter(ILogger<ProgressReporter> logger
+                              , ICentralServer centralServer)
         {
             _logger = logger;
+            _centralServer = centralServer;
 
             timer = new Timer(new TimerCallback(TimerProc), null, Timeout.Infinite, Timeout.Infinite);
         }
 
         private void TimerProc(object state)
         {
-            if (monitored == null || monitored.Count == 0)
+            if (monitoredVMs == null || monitoredVMs.Count == 0)
                 return;
 
-            foreach (var vm in monitored)
+            ReportToLocalLog();
+
+            if (_centralServer.PingSuccess)
+                ReportToCentralServer();
+        }
+
+        private void ReportToLocalLog()
+        {
+            foreach (var vm in monitoredVMs)
             {
-                ReportToLog(vm);
-                ReportToCentralServer(vm);
+                switch (vm.Status)
+                {
+                    case BackupJobStatus.Exporting:
+                        _logger.LogDebug("Export '{name}': {percent}% completed.", vm.Name, vm.ExportPercentComplete);
+                        break;
+
+                    case BackupJobStatus.Archiving:
+                        _logger.LogDebug("Archive '{name}': {percent}% completed.", vm.Name, vm.ArchivePercentComplete);
+                        break;
+                }
             }
         }
 
-        private void ReportToLog(VirtualMachine vm)
+        private void ReportToCentralServer()
         {
-            switch (vm.Status)
+            // TODO: add export folder and archive file names
+
+            var states = new List<BackupState>();
+
+            foreach (var vm in monitoredVMs)
             {
-                case BackupJobStatus.Exporting:
-                    _logger.LogDebug("Export '{name}': {percent}% completed.", vm.Name, vm.ExportPercentComplete);
-                    break;
+                int percent = 0;
 
-                case BackupJobStatus.Archiving:
-                    _logger.LogDebug("Archive '{name}': {percent}% completed.", vm.Name, vm.ArchivePercentComplete);
-                    break;
+                switch (vm.Status)
+                {
+                    case BackupJobStatus.Exporting:
+                        percent = vm.ExportPercentComplete;
+                        break;
+
+                    case BackupJobStatus.Archiving:
+                        percent = vm.ArchivePercentComplete;
+                        break;
+                }
+
+                var state = new BackupState()
+                {
+                    VmName = vm.Name,
+
+                    // TODO: Add date Started
+
+                    State = vm.Status.ToString(),
+                    PercentComplete = percent
+                };
+
+                states.Add(state);
             }
-        }
 
-        private void ReportToCentralServer(VirtualMachine vm)
-        {
-            // TODO: add reporting to central server
+            var progress = new HttpPostBackupProgress();
+            progress.Hypervisor = Util.GetCurrentServerFQDN();
+            progress.BackupStates = states;
+
+            var result = _centralServer.SendBackupProgress(progress).Result;
+
+            if (!result.Success)
+                _logger.LogError("Error occurred while send backup progress to central server. Error was: {err}",
+                    result.Message);
         }
 
         public void SendReportsFor(IList<VirtualMachine> virtualMachines)
         {
-            monitored = virtualMachines;
+            monitoredVMs = virtualMachines;
         }
 
         public void SetReportFrequency(int frequencyMilliseconds)
