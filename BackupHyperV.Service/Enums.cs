@@ -12,7 +12,7 @@
         Exporting,
         Archiving,
         Rotating,
-        Complete,
+        Completed,
         Canceled
     };
 

@@ -18,6 +18,8 @@ namespace BackupHyperV.Service.Impl
         private bool disposed = false;
         private IList<VirtualMachine> monitoredVMs;
 
+        private HashSet<VirtualMachine> activeVMs = new HashSet<VirtualMachine>();
+
         public ProgressReporter(ILogger<ProgressReporter> logger
                               , ICentralServer centralServer)
         {
@@ -32,10 +34,38 @@ namespace BackupHyperV.Service.Impl
             if (monitoredVMs == null || monitoredVMs.Count == 0)
                 return;
 
+            RefreshVMsStatuses();
+
             ReportToLocalLog();
 
             if (_centralServer.PingSuccess)
                 ReportToCentralServer();
+        }
+
+        private void RefreshVMsStatuses()
+        {
+            foreach (var vm in monitoredVMs)
+            {
+                switch (vm.Status)
+                {
+                    case BackupJobStatus.Exporting:
+                    case BackupJobStatus.Archiving:
+                        activeVMs.Add(vm);
+                        break;
+
+                    case BackupJobStatus.Completed:
+                        vm.Status = BackupJobStatus.Idle;
+                        break;
+
+                    default:
+                        if (activeVMs.Contains(vm))
+                        {
+                            activeVMs.Remove(vm);
+                            vm.Status = BackupJobStatus.Completed;
+                        }
+                        break;
+                }
+            }
         }
 
         private void ReportToLocalLog()
@@ -83,7 +113,9 @@ namespace BackupHyperV.Service.Impl
                     // TODO: Add date Started
 
                     State = vm.Status.ToString(),
-                    PercentComplete = percent
+                    PercentComplete = percent,
+                    ExportedToFolder = vm.ExportPath,
+                    ArchivedToFile = vm.ArchivePath
                 };
 
                 states.Add(state);

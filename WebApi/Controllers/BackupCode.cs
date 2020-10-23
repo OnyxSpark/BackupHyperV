@@ -93,9 +93,24 @@ namespace WebApi.Controllers
                 vm.Status = state.State;
                 vm.PercentComplete = state.PercentComplete;
                 vm.StatusUpdated = DateTime.Now;
+
+                if (state.State == "Completed")
+                    WriteHistoryToDB(vm, state);
             }
 
             await _context.SaveChangesAsync();
+        }
+
+        private void WriteHistoryToDB(VirtualMachine vm, BackupState state)
+        {
+            var history = new BackupHistory();
+            history.VirtualMachine = vm;
+            history.Success = true;             // TODO: send real status
+            history.BackupDate = DateTime.Now;
+            history.ExportedToFolder = state.ExportedToFolder;
+            history.ArchivedToFile = state.ArchivedToFile;
+
+            _context.History.Add(history);
         }
     }
 }

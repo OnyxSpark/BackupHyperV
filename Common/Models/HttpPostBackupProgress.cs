@@ -12,6 +12,10 @@ namespace Common.Models
         public string State { get; set; }
 
         public int PercentComplete { get; set; }
+
+        public string ExportedToFolder { get; set; }
+
+        public string ArchivedToFile { get; set; }
     }
 
     public class HttpPostBackupProgress
