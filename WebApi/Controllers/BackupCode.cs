@@ -1,4 +1,5 @@
-﻿using Common.Models;
+﻿using Common;
+using Common.Models;
 using DB;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Logging;
@@ -83,6 +84,7 @@ namespace WebApi.Controllers
             foreach (var state in progress.BackupStates)
             {
                 var vm = hyperV.VirtualMachines.FirstOrDefault(v => v.Name.ToLower() == state.VmName.ToLower());
+
                 if (vm == null)
                 {
                     _logger.LogError("Could not find virtual machine with name \"{vm}\" for hypervisor \"{hv}\"",
@@ -90,27 +92,48 @@ namespace WebApi.Controllers
                     return;
                 }
 
-                vm.Status = state.State;
-                vm.PercentComplete = state.PercentComplete;
-                vm.StatusUpdated = DateTime.Now;
+                WriteCurrentStateToDB(vm, state);
 
-                if (state.State == "Completed")
-                    WriteHistoryToDB(vm, state);
+                if (state.Status != BackupJobStatus.Idle)
+                    await WriteHistoryAsync(vm, state);
             }
 
             await _context.SaveChangesAsync();
         }
 
-        private void WriteHistoryToDB(VirtualMachine vm, BackupState state)
+        private void WriteCurrentStateToDB(VirtualMachine vm, BackupState bs)
         {
-            var history = new BackupHistory();
-            history.VirtualMachine = vm;
-            history.Success = true;             // TODO: send real status
-            history.BackupDate = DateTime.Now;
-            history.ExportedToFolder = state.ExportedToFolder;
-            history.ArchivedToFile = state.ArchivedToFile;
+            vm.Status = bs.Status.ToString();
+            vm.PercentComplete = bs.PercentComplete;
+            vm.StatusUpdated = DateTime.Now;
+        }
 
-            _context.History.Add(history);
+        private async Task WriteHistoryAsync(VirtualMachine vm, BackupState bs)
+        {
+            var history = await _context.History.FirstOrDefaultAsync(h =>
+                                               h.VirtualMachine == vm
+                                            && h.BackupDateStart == bs.BackupStartDate);
+
+            if (history == null)
+            {
+                history = new BackupHistory();
+                _context.History.Add(history);
+            }
+
+            history.VirtualMachine = vm;
+            history.LastKnownStatus = bs.Status.ToString();
+            history.ExportedToFolder = bs.ExportedToFolder;
+            history.ArchivedToFile = bs.ArchivedToFile;
+
+            if (bs.Status == BackupJobStatus.Completed)
+                history.Success = true;
+            else
+                history.Success = false;
+
+            if (bs.BackupStartDate.HasValue)
+                history.BackupDateStart = bs.BackupStartDate.Value;
+
+            history.BackupDateEnd = bs.BackupEndDate;
         }
     }
 }

@@ -1,5 +1,6 @@
 ﻿using BackupHyperV.Service.Interfaces;
 using BackupHyperV.Service.Models;
+using Common;
 using Common.Models;
 using Microsoft.Extensions.Logging;
 using System;
@@ -109,10 +110,9 @@ namespace BackupHyperV.Service.Impl
                 var state = new BackupState()
                 {
                     VmName = vm.Name,
-
-                    // TODO: Add date Started
-
-                    State = vm.Status.ToString(),
+                    BackupStartDate = vm.BackupStartDate,
+                    BackupEndDate = vm.BackupEndDate,
+                    Status = vm.Status,
                     PercentComplete = percent,
                     ExportedToFolder = vm.ExportPath,
                     ArchivedToFile = vm.ArchivePath
@@ -140,7 +140,7 @@ namespace BackupHyperV.Service.Impl
         public void SetReportFrequency(int frequencyMilliseconds)
         {
             timerFrequency = frequencyMilliseconds;
-            timer.Change(0, timerFrequency);
+            timer.Change(timerFrequency, timerFrequency);
 
             _logger.LogDebug("{type} timer frequency changed to {msec} milliseconds.",
                         nameof(BackupTaskService), frequencyMilliseconds);
@@ -148,7 +148,7 @@ namespace BackupHyperV.Service.Impl
 
         public void StartReporting()
         {
-            timer.Change(0, timerFrequency);
+            timer.Change(timerFrequency, timerFrequency);
         }
 
         public void StopReporting()

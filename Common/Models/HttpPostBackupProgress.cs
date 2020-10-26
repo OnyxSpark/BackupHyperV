@@ -7,9 +7,11 @@ namespace Common.Models
     {
         public string VmName { get; set; }
 
-        public DateTime Started { get; set; }
+        public DateTime? BackupStartDate { get; set; }
 
-        public string State { get; set; }
+        public DateTime? BackupEndDate { get; set; }
+
+        public BackupJobStatus Status { get; set; }
 
         public int PercentComplete { get; set; }
 

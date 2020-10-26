@@ -1,5 +1,6 @@
 ﻿using BackupHyperV.Service.Interfaces;
 using BackupHyperV.Service.Models;
+using Common;
 using Common.Models;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.Logging;
@@ -219,6 +220,8 @@ namespace BackupHyperV.Service
         {
             bool success = false;
             vm.Status = BackupJobStatus.Exporting;
+            vm.BackupStartDate = DateTime.Now;
+            vm.BackupEndDate = null;
 
             _logger.LogInformation("Start of export virtual machine '{name}'.", vm.Name);
 
@@ -252,6 +255,7 @@ namespace BackupHyperV.Service
             }
 
             vm.Status = BackupJobStatus.Idle;
+            vm.BackupEndDate = DateTime.Now;
             return success;
         }
 

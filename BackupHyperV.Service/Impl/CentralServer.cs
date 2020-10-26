@@ -80,6 +80,9 @@ namespace BackupHyperV.Service.Impl
             string jsonRequest = JsonConvert.SerializeObject(content);
             HttpContent httpContent = new StringContent(jsonRequest, Encoding.UTF8, "application/json");
 
+            _logger.LogDebug("HTTP POST query to URL = \"{url}\"", url);
+            _logger.LogDebug("HTTP POST query body = {body}", jsonRequest);
+
             var msg = await client.PostAsync(url, httpContent);
 
             if (!msg.IsSuccessStatusCode)
@@ -97,6 +100,8 @@ namespace BackupHyperV.Service.Impl
 
         private async Task<ApiResult> DoGetRequest(string url)
         {
+            _logger.LogDebug("HTTP GET query to URL = \"{url}\"", url);
+
             var msg = await client.GetAsync(url);
 
             if (!msg.IsSuccessStatusCode)

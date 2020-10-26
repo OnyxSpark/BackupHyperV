@@ -1,4 +1,5 @@
-﻿using Newtonsoft.Json;
+﻿using Common;
+using Newtonsoft.Json;
 using SimpleSchedules;
 using System;
 using System.Collections.Generic;
@@ -15,6 +16,12 @@ namespace BackupHyperV.Service.Models
 
         [JsonProperty("BackupSchedules", Order = 8)]
         public List<ScheduleConfig> SchedulesConfigs { get; set; }
+
+        [JsonIgnore]
+        public DateTime? BackupStartDate { get; set; }
+
+        [JsonIgnore]
+        public DateTime? BackupEndDate { get; set; }
 
         [JsonIgnore]
         public Schedule[] LoadedSchedules { get; internal set; }

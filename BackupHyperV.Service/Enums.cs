@@ -6,16 +6,6 @@
         Active
     };
 
-    public enum BackupJobStatus
-    {
-        Idle,
-        Exporting,
-        Archiving,
-        Rotating,
-        Completed,
-        Canceled
-    };
-
     public enum JobState
     {
         New = 2,
