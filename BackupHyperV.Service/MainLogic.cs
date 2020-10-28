@@ -85,7 +85,11 @@ namespace BackupHyperV.Service
         private void LoadNewTask()
         {
             backupTask = _backupTaskService.CurrentBackupTask;
-            _progressReporter.SendReportsFor(backupTask.VirtualMachines);
+
+            if (backupTask != null
+             && backupTask.VirtualMachines != null
+             && backupTask.VirtualMachines.Count > 0)
+                _progressReporter.SendReportsFor(backupTask.VirtualMachines);
 
             LoadSchedulesFromBackupTask();
 
