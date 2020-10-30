@@ -3,10 +3,12 @@ using Common.Models;
 using DB;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Logging;
+using Newtonsoft.Json;
 using System;
 using System.Collections.Generic;
 using System.Linq;
 using System.Threading.Tasks;
+using WebApi.Models;
 
 namespace WebApi.Controllers
 {
@@ -106,6 +108,7 @@ namespace WebApi.Controllers
             vm.Status = bs.Status.ToString();
             vm.PercentComplete = bs.PercentComplete;
             vm.StatusUpdated = DateTime.Now;
+            vm.LastBackup = bs.LastBackup;
         }
 
         private async Task WriteHistoryAsync(VirtualMachine vm, BackupState bs)
@@ -134,6 +137,68 @@ namespace WebApi.Controllers
                 history.BackupDateStart = bs.BackupStartDate.Value;
 
             history.BackupDateEnd = bs.BackupEndDate;
+        }
+
+        private async Task<string> GetVmStatesAsync()
+        {
+            var vmList = new List<VmState>();
+
+            var hypers = await _context.Hypervisors.Include(h => h.VirtualMachines).ToListAsync();
+
+            if (hypers == null || hypers.Count == 0)
+                return null;
+
+            foreach (var h in hypers)
+            {
+                foreach (var vm in h.VirtualMachines)
+                {
+                    var s = new VmState();
+
+                    s.VmId = vm.Id;
+                    s.Hypervisor = h.Name;
+                    s.Name = vm.Name;
+                    s.Status = vm.Status;
+                    s.PercentComplete = vm.PercentComplete;
+                    s.StatusUpdated = vm.StatusUpdated;
+                    s.LastBackup = vm.LastBackup;
+
+                    vmList.Add(s);
+                }
+            }
+
+            return JsonConvert.SerializeObject(vmList);
+        }
+
+        private async Task<string> GetVmHistoryAsync(int vmid)
+        {
+            var history = new VmHistory();
+            history.HistoryRecords = new List<HistoryRecord>();
+
+            var records = await _context.History
+                                        .Where(vm => vm.VirtualMachineId == vmid)
+                                        .Include(v => v.VirtualMachine)
+                                        .ThenInclude(h => h.Hypervisor)
+                                        .ToListAsync();
+
+            if (records == null || records.Count == 0)
+                return null;
+
+            foreach (var rec in records)
+            {
+                history.Hypervisor = rec.VirtualMachine.Hypervisor.Name;
+
+                var h = new HistoryRecord();
+                h.BackupDateStart = rec.BackupDateStart;
+                h.BackupDateEnd = rec.BackupDateEnd;
+                h.Success = rec.Success;
+                h.LastKnownStatus = rec.LastKnownStatus;
+                h.ExportedToFolder = rec.ExportedToFolder;
+                h.ArchivedToFile = rec.ArchivedToFile;
+
+                history.HistoryRecords.Add(h);
+            }
+
+            return JsonConvert.SerializeObject(history);
         }
     }
 }

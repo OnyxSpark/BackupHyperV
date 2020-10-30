@@ -78,5 +78,41 @@ namespace WebApi.Controllers
 
             return new ApiResult() { Success = true, Data = json };
         }
+
+        [HttpGet]
+        public async Task<ApiResult> GetVmStates()
+        {
+            string json = null;
+
+            try
+            {
+                json = await GetVmStatesAsync();
+            }
+            catch (Exception e)
+            {
+                _logger.LogError(e.ToString());
+                return new ApiResult() { Success = false, Message = e.Message };
+            }
+
+            return new ApiResult() { Success = true, Data = json };
+        }
+
+        [HttpGet]
+        public async Task<ApiResult> GetVmHistory(int vmid)
+        {
+            string json = null;
+
+            try
+            {
+                json = await GetVmHistoryAsync(vmid);
+            }
+            catch (Exception e)
+            {
+                _logger.LogError(e.ToString());
+                return new ApiResult() { Success = false, Message = e.Message };
+            }
+
+            return new ApiResult() { Success = true, Data = json };
+        }
     }
 }

@@ -1,0 +1,70 @@
+﻿<!DOCTYPE html>
+<html>
+
+<head>
+    <link href="https://fonts.googleapis.com/css?family=Roboto:100,300,400,500,700,900" rel="stylesheet">
+    <link href="https://cdn.jsdelivr.net/npm/@mdi/font@4.x/css/materialdesignicons.min.css" rel="stylesheet">
+    <link href="https://cdn.jsdelivr.net/npm/vuetify@2.x/dist/vuetify.min.css" rel="stylesheet">
+    <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no, minimal-ui">
+    <meta charset="utf-8" />
+</head>
+
+<body>
+    <div id="app">
+        <v-app>
+            <v-main>
+                <v-app-bar app class="blue-grey lighten-4">
+                    <v-toolbar-title>Backup Hyper-V Central Server</v-toolbar-title>
+                </v-app-bar>
+                <v-data-table class="mt-2" :headers="headers" :items="historyRecords" item-key="BackupDateStart"
+                              sort-by="BackupDateStart" hide-default-footer class="elevation-1" :loading="isLoading">
+
+                    <template v-slot:body="{ items }">
+                        <tbody>
+                            <tr v-for="item in items" :key="item.BackupDateStart">
+                                <td style="width: 170px;">
+                                    <v-layout justify-center>{{ item.BackupDateStart }}</v-layout>
+                                </td>
+                                <td style="width: 170px;">
+                                    <v-layout justify-center>{{ item.BackupDateEnd }}</v-layout>
+                                </td>
+                                <td>
+                                    <v-layout justify-center>
+                                        <v-chip :color="getColor(item.Success)" dark label>
+                                            {{ item.Success ? 'Success' : 'Failed' }}
+                                        </v-chip>
+                                    </v-layout>
+                                </td>
+                                <td>
+                                    <v-layout justify-center>
+                                        {{ item.LastKnownStatus }}
+                                    </v-layout>
+                                </td>
+                                <td :title="item.ExportedToFolder">
+                                    <v-layout justify-center>
+                                        {{ extractFileName(item.ExportedToFolder) }}
+                                    </v-layout>
+                                </td>
+                                <td :title="item.ArchivedToFile">
+                                    <v-layout justify-center>
+                                        {{ extractFileName(item.ArchivedToFile) }}
+                                    </v-layout>
+                                </td>
+                            </tr>
+                        </tbody>
+                    </template>
+
+                </v-data-table>
+            </v-main>
+        </v-app>
+    </div>
+
+    <script src="https://cdn.jsdelivr.net/npm/vue@2.x/dist/vue.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/vuetify@2.x/dist/vuetify.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/axios/dist/axios.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/moment.js/2.29.1/moment.min.js"></script>
+    <script src="js/main.js"></script>
+    <script src="js/history.js"></script>
+</body>
+
+</html>
