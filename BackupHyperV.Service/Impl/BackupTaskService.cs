@@ -87,7 +87,15 @@ namespace BackupHyperV.Service.Impl
             if (_centralServer.PingSuccess)
             {
                 _logger.LogDebug("Reading backup task from central server.");
-                return GetBackupTaskFromCentralServer();
+                var task = GetBackupTaskFromCentralServer();
+
+                if (task == null)
+                {
+                    _logger.LogWarning("Could not download backup task from central server, will use local file.");
+                    task = GetBackupTaskFromLocalFile();
+                }
+
+                return task;
             }
             else
             {
