@@ -18,6 +18,8 @@ namespace Common.Models
         public string ExportedToFolder { get; set; }
 
         public string ArchivedToFile { get; set; }
+
+        public DateTime? LastBackup { get; set; }
     }
 
     public class HttpPostBackupProgress

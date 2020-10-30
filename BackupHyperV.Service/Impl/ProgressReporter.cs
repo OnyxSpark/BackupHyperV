@@ -63,6 +63,7 @@ namespace BackupHyperV.Service.Impl
                         {
                             activeVMs.Remove(vm);
                             vm.Status = BackupJobStatus.Completed;
+                            vm.LastBackup = DateTime.Now;
                         }
                         break;
                 }
@@ -88,8 +89,6 @@ namespace BackupHyperV.Service.Impl
 
         private void ReportToCentralServer()
         {
-            // TODO: add export folder and archive file names
-
             var states = new List<BackupState>();
 
             foreach (var vm in monitoredVMs)
@@ -115,7 +114,8 @@ namespace BackupHyperV.Service.Impl
                     Status = vm.Status,
                     PercentComplete = percent,
                     ExportedToFolder = vm.ExportPath,
-                    ArchivedToFile = vm.ArchivePath
+                    ArchivedToFile = vm.ArchivePath,
+                    LastBackup = vm.LastBackup
                 };
 
                 states.Add(state);

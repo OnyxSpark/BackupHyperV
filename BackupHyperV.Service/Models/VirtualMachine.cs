@@ -24,6 +24,9 @@ namespace BackupHyperV.Service.Models
         public DateTime? BackupEndDate { get; set; }
 
         [JsonIgnore]
+        public DateTime? LastBackup { get; set; }
+
+        [JsonIgnore]
         public Schedule[] LoadedSchedules { get; internal set; }
 
         [JsonProperty(Order = 2)]

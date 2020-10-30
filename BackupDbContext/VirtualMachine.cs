@@ -23,5 +23,7 @@ namespace DB
         public DateTime? StatusUpdated { get; set; }
 
         public int? PercentComplete { get; set; }
+
+        public DateTime? LastBackup { get; set; }
     }
 }
