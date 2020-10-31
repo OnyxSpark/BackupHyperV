@@ -25,8 +25,10 @@ The central server is responsible for the following aspects:
 At this moment, the first 2 points have been implemented:
 
 Current state of agents:
+
 ![MainPage](https://github.com/OnyxSpark/BackupHyperV/blob/master/Images/MainPage.jpg "Main page")
 
 Virtual machine backup history:
+
 ![HistoryPage](https://github.com/OnyxSpark/BackupHyperV/blob/master/Images/HistoryPage.jpg "History page")
 
